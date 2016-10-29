@@ -4,23 +4,37 @@ import subprocess
 
 class CmdStan(object):
 	def __init__(self, stan_folder):
+		'''
+		CmdStan Obect
+
+		Arg:
+		stan_folder (str):	the folder where cmdstn is 
+		'''
 		self.stan_folder = stan_folder
 
 	def compile(self, model_name, model_code, debug=True):
 		"""
-		Complie the model and save it for future use
+		Complie the model and save it for future as models/<model_name>.stan
+		Rerunning with the same model name will cause the old model to be overritten
 		
 		Args:
 			model_name (string):		Name of the model, without the '.stan' extension
 			model_code (string):		Code for the model
 			debug (bool):				If true, print the output from the Stan compiler
 		"""
+		# Move to Stan Folder
 		current_dir = os.path.realpath(os.curdir)
 		os.chdir(self.stan_folder)
 
+		# Colud check here if the file already exists
+
+		# Create the model file
 		with open("models/" + model_name + ".stan", "w") as model_file:
 			model_file.write(model_code)
-		process = subprocess.Popen(["make", "models/" + model_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+		# Make compile the model in C++
+		process = subprocess.Popen(["make","models/" + model_name],
+		stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		output = process.communicate()
 		if debug:
 			print "*** Verbose output (call with debug=False to suppress) ***"
@@ -29,26 +43,18 @@ class CmdStan(object):
 		if process.returncode != 0:
 			raise RuntimeError("Model could not be compiled, return code: " + str(process.returncode))
 
+		# Switch back to cmstan Folder
 		os.chdir(current_dir)
 
-	def fit(self, model_name, data, chains=2, iterations=1000, method="sample", debug=True):
-		"""
-		Fit the model using the supplied data and return posterior samples
-		
-		Args:
-			model_name (string):		The name of the model (must be already compiled)
-			data (dict): 				Input data as numpy arrays or simple scalars
-			chains (int):				Number of parallel chains to run
-			iteratons (int):			Number of iterations to run
-			method (string): 			"sample", "optimize" or "variational"
-			debug (bool):				If true, print verbose error messages instead of raising exceptions
-		"""
-		current_dir = os.path.realpath(os.curdir)
-		os.chdir(self.stan_folder)
 
-		# Save the data in R dump() format
-		data_file_name = "data/" + model_name + ".data.R"
-		with open(data_file_name, "w") as data_file:
+	def save_Rdump(self, filename, data):
+		'''
+		Save a dictionary to R dumop format
+		Args:
+			filename (str)
+			data (dict)
+		'''
+		with open(filename, "w") as data_file:
 			for key,val in data.items():
 				data_file.write(key + " <- ")
 				if type(val) == np.ndarray:
@@ -60,23 +66,74 @@ class CmdStan(object):
 				else: # scalar
 					data_file.write(str(val))
 				data_file.write("\n")
+	
+	def fit(self, model_name, data, output_name, method="sample", additional_options=[], debug=True, parse_output=False, folder=''):
+		"""
+		Fit the model using the supplied data and save posterior samples (optionally loads them in memory)
 		
-		process = subprocess.Popen(["models/" + model_name, method, "data", "file=" + data_file_name, "output", "file=samples/" + model_name + ".csv"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		Args:
+			model_name (string):		The name of the model (must be already compiled)
+			data (dict): 				Input data as numpy arrays or simple scalars
+			output_name (str):			A string a file will be saved as samples/rfolder/out_put_name.csv
+			method (string): 			"sample", "optimize" or "variational"
+			additional_options (list):  list containing options ready to pass to cmd stan through Popen, 
+										the order has to respect the hierarchical system described in the manual 
+			debug (bool):				If true, print verbose error messages instead of raising exceptions
+			parse_output (bool):		If True runs self.parse_results(output_name) and return its output
+			folder (str):				The project folder within samples where the file is saved (default, save directly in samples)
+		"""
+		current_dir = os.path.realpath(os.curdir)
+		os.chdir(self.stan_folder)
+		# Make sure the output folder exists otherwise create it 
+		if not os.path.isdir(os.path.join("samples", folder)):
+			print 'Creating the folder <cmdstanfolder>/samples/%s' % folder
+			os.makedirs(os.path.join("samples", folder)) 
+
+		# Save the data in R dump() format, only temporarly
+		data_file_name = "data/" + model_name + '_' +  output_name + ".data.R"
+		self.save_Rdump(data_file_name, data)
+		
+		# Run the comand to start the cmdstan process
+		process = subprocess.Popen(["models/" + model_name, method] +
+		additional_options + ["data", "file=" + data_file_name,
+		"output", "file=" + os.path.join( "samples", folder, output_name + ".csv")],
+		stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		
+		# Deal with the process output
 		output = process.communicate()
 		if debug:
 			print "*** Verbose output (call with debug=False to suppress) ***"
 			print output[0]
 			print output[1]
+
+		# Deal with possible errors
 		if process.returncode != 0:
 			if debug:
 				print "ERROR: No samples were generated!"
 				return {}
 			else:
 				raise RuntimeError("No samples were generated, return code: " + str(process.returncode))
-			
+		
+		#Delete the R dump() file
+		os.remove(data_file_name)
+
+		# Go back to initial directory
+		os.chdir(current_dir)
+
+		if parse_output:
+			return self.parse_results(output_name)
+		else:
+			return None
+
+	def parse_results(self, output_name):
+		# Change directory, and remember old one
+		current_dir = os.path.realpath(os.curdir)
+		os.chdir(self.stan_folder)
+
+		# Parse out the parameters in a dictionary
 		params = []
 		samples = []
-		with open("samples/" + model_name + ".csv","r") as infile:
+		with open("samples/" + output_name + ".csv","r") as infile:
 			for line in infile:
 				if line[0:2] == "lp":
 					params = line.strip().split(",")
@@ -92,4 +149,5 @@ class CmdStan(object):
 		os.chdir(current_dir)
 
 		return result	
+
 	
