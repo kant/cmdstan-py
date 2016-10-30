@@ -49,6 +49,7 @@ if __name__ == '__main__':
     elif input_format == 'loom':
         # Load the loom file
         import loompy
+        print "Connecting to the .loom file"
         ds = loompy.connect(input_path)
     else:
         print 'The format specified is not accepted. Please provide a .loom or .cef file'
@@ -129,10 +130,40 @@ if __name__ == '__main__':
 
         N = len( predictor_matrix )
         K = len( predictors )
-    else:
-        ## TODO Implement a loom version
-        ## TODO add the possibility to include custom predictor matrix to the model
-        raise NotImplementedError
+
+    elif input_format == 'loom':
+
+        embedded_predictors = [i for i in  ds.col_attrs.keys() if 'Predictor' in i]
+        if len(embedded_predictors) == 0:
+            # Create a design matrix if there is no embedded one
+            for i,v in ds.col_attrs.iteritems():
+                if i == clustering_attribute:
+                    predictor_list = v
+                if 'total' in i.lower():
+                    total_molecules = [float(j) for j in v ]
+                    
+            for i,v in ds.row_attrs.iteritems():
+                if 'gene' in i.lower():
+                    gene_names = v
+
+            total = sum(total_molecules)/len(total_molecules)
+            total_molecules_norm = [j/total for j in total_molecules]
+            predictors = ['Size']
+            for i in predictor_list:
+                if i not in predictors:
+                    predictors.append(i)
+
+            predictor_matrix = []
+            for i, c_p in enumerate( predictor_list ):
+                predictor_matrix.append( [total_molecules_norm[i]] + [float(c_p==p) for p in predictors[1:]] )
+
+            predictor_matrix = np.array(predictor_matrix)
+            N, K = predictor_matrix.shape
+        else:
+            # Use the embedded design matrix
+            for i in range(len(embedded_predictors)):
+                predictor_matrix = np.hstack( ( ds.col_attrs[ 'Predictor.%s' % i ] for i in range(len(embedded_predictors) ) ) )
+            N, K = predictor_matrix.shape
 
     
     def one_gene_model(name_gene, gene_vector, predictor_matrix, N, K):
@@ -148,8 +179,15 @@ if __name__ == '__main__':
     print 'Passing the inputs to mutliple threads'
     try:
         p = Pool(processes=n_processes)
-        for name_gene, gene_vector in izip(gene_names, cef.matrix):
-            p.apply_async(one_gene_model,(name_gene, gene_vector, predictor_matrix, N, K))
+        # In case of cef file
+        if input_format == 'cef':
+            for name_gene, gene_vector in izip(gene_names, cef.matrix):
+                p.apply_async(one_gene_model,(name_gene, gene_vector, predictor_matrix, N, K))
+        # In case of loom file
+        elif input_format == 'loom':
+            for name_gene in ds.row_attrs['Gene']:
+                gene_vector = ds[ds.Gene == name_gene, :][0].astype(int)
+                p.apply_async(one_gene_model,(name_gene, gene_vector, predictor_matrix, N, K))
         p.close()
         p.join()
     except KeyboardInterrupt:
