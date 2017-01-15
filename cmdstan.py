@@ -117,23 +117,24 @@ class CmdStan(object):
 		#Delete the R dump() file
 		os.remove(data_file_name)
 
+
+		if parse_output:
+			out_ = self.parse_results("samples/" + output_name + ".csv")
+		else:
+			out_ = None
+
 		# Go back to initial directory
 		os.chdir(current_dir)
 
-		if parse_output:
-			return self.parse_results(output_name)
-		else:
-			return None
+		return out_
 
-	def parse_results(self, output_name):
-		# Change directory, and remember old one
-		current_dir = os.path.realpath(os.curdir)
-		os.chdir(self.stan_folder)
+	@staticmethod
+	def parse_results(file_path):
 
 		# Parse out the parameters in a dictionary
 		params = []
 		samples = []
-		with open("samples/" + output_name + ".csv","r") as infile:
+		with open(file_path ,"r") as infile:
 			for line in infile:
 				if line[0:2] == "lp":
 					params = line.strip().split(",")
@@ -146,8 +147,4 @@ class CmdStan(object):
 		for ix in xrange(len(params)):
 			result[params[ix]] = samples[:,ix]
 
-		os.chdir(current_dir)
-
-		return result	
-
-	
+		return result
