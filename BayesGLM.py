@@ -5,7 +5,7 @@ import getopt
 import sys, os
 from cmdstan import CmdStan
 from multiprocessing import Pool
-from itertools import izip
+from six import zip
 
 if __name__ == '__main__':
     n_processes = 2
@@ -15,11 +15,11 @@ if __name__ == '__main__':
     optlist, args = getopt.gnu_getopt(sys.argv[1:], "hi:o:c:p:s:", ["help", "input=","output=","clus_attr=","processes=",'stanfolder='])
 
     if optlist== [] and args == []:
-        print 'pystancef -i [INPUTFILE] -o [OUTPUTFOLDER] -c [CLUSTER_ATTRIBUTE] -p [THREADS] -s [CMDSTANFOLDER]'
+        print('pystancef -i [INPUTFILE] -o [OUTPUTFOLDER] -c [CLUSTER_ATTRIBUTE] -p [THREADS] -s [CMDSTANFOLDER]')
         sys.exit()
     for opt, a in optlist:
         if opt in ("-h", "--help"):
-            usage()
+            print('pystancef -i [INPUTFILE] -o [OUTPUTFOLDER] -c [CLUSTER_ATTRIBUTE] -p [THREADS] -s [CMDSTANFOLDER]')
             sys.exit()
         elif opt in ('-i', '--input'):
             input_path = a
@@ -41,18 +41,18 @@ if __name__ == '__main__':
         from Cef_tools import CEF_obj
         cef = CEF_obj()
         try:
-            print 'Loading CEF'
+            print('Loading CEF')
             cef.readCEF(input_path)
         except:
-            print 'Error in loading CEF file'
+            print('Error in loading CEF file')
 
     elif input_format == 'loom':
         # Load the loom file
         import loompy
-        print "Connecting to the .loom file"
+        print ("Connecting to the .loom file")
         ds = loompy.connect(input_path)
     else:
-        print 'The format specified is not accepted. Please provide a .loom or .cef file'
+        print ('The format specified is not accepted. Please provide a .loom or .cef file')
         sys.exit()
 
     #Load Stan controller
@@ -63,9 +63,9 @@ if __name__ == '__main__':
     
     # Check the existence of the compiled model otherwise compile
     if os.path.isfile(os.path.join('models', 'bayessianGLM')):
-        print 'Model is already compiled.'
+        print( 'Model is already compiled.')
     else:
-        print 'Compiled model was not found. Defining and compiling model.'
+        print('Compiled model was not found. Defining and compiling model.')
         model_code = '''
         # Bayesian Negative Binomial regression for single-cell RNA-seq
 
@@ -99,21 +99,21 @@ if __name__ == '__main__':
             y ~ neg_binomial(mu ./ rv, 1 / rv[1]);
         }
             '''
-        print model_code
+        print(model_code)
 
         stan.compile("bayessianGLM", model_code)
 
-        print 'Model is now saved for future use at %s' % os.path.join(stan_folder, "models")
+        print( 'Model is now saved for future use at %s' % os.path.join(stan_folder, "models"))
 
     if input_format == 'cef':
-        print 'Formating the model input'
-        for i,v in izip(cef.col_attr_names, cef.col_attr_values):
+        print('Formating the model input')
+        for i,v in zip(cef.col_attr_names, cef.col_attr_values):
             if i == clustering_attribute:
                 predictor_list = v
             if 'total' in i.lower():
                 total_molecules = [float(j) for j in v ]
                 
-        for i,v in izip(cef.row_attr_names, cef.row_attr_values):
+        for i,v in zip(cef.row_attr_names, cef.row_attr_values):
             if 'gene' in i.lower():
                 gene_names = v
 
@@ -176,12 +176,12 @@ if __name__ == '__main__':
         folder=os.path.split(input_path)[-1].split('.')[0]) 
 
     # Code to execute multiple treads
-    print 'Passing the inputs to mutliple threads'
+    print('Passing the inputs to mutliple threads')
     try:
         p = Pool(processes=n_processes)
         # In case of cef file
         if input_format == 'cef':
-            for name_gene, gene_vector in izip(gene_names, cef.matrix):
+            for name_gene, gene_vector in zip(gene_names, cef.matrix):
                 p.apply_async(one_gene_model,(name_gene, gene_vector, predictor_matrix, N, K))
         # In case of loom file
         elif input_format == 'loom':
@@ -192,5 +192,5 @@ if __name__ == '__main__':
         p.join()
     except KeyboardInterrupt:
         p.terminate()
-        print "You cancelled the program!"
+        print("You cancelled the program!")
         sys.exit(1)

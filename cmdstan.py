@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import subprocess
+from six.moves import zip, xrange
 
 class CmdStan(object):
 	def __init__(self, stan_folder):
@@ -37,9 +38,9 @@ class CmdStan(object):
 		stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 		output = process.communicate()
 		if debug:
-			print "*** Verbose output (call with debug=False to suppress) ***"
-			print output[0]
-			print output[1]
+			print("*** Verbose output (call with debug=False to suppress) ***")
+			print(output[0])
+			print(output[1])
 		if process.returncode != 0:
 			raise RuntimeError("Model could not be compiled, return code: " + str(process.returncode))
 
@@ -63,7 +64,7 @@ class CmdStan(object):
 					else:
 						temp = val.flatten('F')
 						data_file.write(("structure(c(" + ",".join([str(x) for x in val.flatten('F')])+ "),.Dim=c(%d,%d))") % val.shape)
-				else: # scalar
+				else:  # scalar
 					data_file.write(str(val))
 				data_file.write("\n")
 	
@@ -86,7 +87,7 @@ class CmdStan(object):
 		os.chdir(self.stan_folder)
 		# Make sure the output folder exists otherwise create it 
 		if not os.path.isdir(os.path.join("samples", folder)):
-			print 'Creating the folder <cmdstanfolder>/samples/%s' % folder
+			print('Creating the folder <cmdstanfolder>/samples/%s' % folder)
 			os.makedirs(os.path.join("samples", folder)) 
 
 		# Save the data in R dump() format, only temporarly
@@ -102,21 +103,20 @@ class CmdStan(object):
 		# Deal with the process output
 		output = process.communicate()
 		if debug:
-			print "*** Verbose output (call with debug=False to suppress) ***"
-			print output[0]
-			print output[1]
+			print ("*** Verbose output (call with debug=False to suppress) ***")
+			print (output[0])
+			print (output[1])
 
 		# Deal with possible errors
 		if process.returncode != 0:
 			if debug:
-				print "ERROR: No samples were generated!"
+				print("ERROR: No samples were generated!")
 				return {}
 			else:
 				raise RuntimeError("No samples were generated, return code: " + str(process.returncode))
 		
 		#Delete the R dump() file
 		os.remove(data_file_name)
-
 
 		if parse_output:
 			out_ = self.parse_results("samples/" + output_name + ".csv")
@@ -130,11 +130,10 @@ class CmdStan(object):
 
 	@staticmethod
 	def parse_results(file_path):
-
 		# Parse out the parameters in a dictionary
 		params = []
 		samples = []
-		with open(file_path ,"r") as infile:
+		with open(file_path, "r") as infile:
 			for line in infile:
 				if line[0:2] == "lp":
 					params = line.strip().split(",")
@@ -145,6 +144,6 @@ class CmdStan(object):
 		samples = np.array(samples)
 		result = {}
 		for ix in xrange(len(params)):
-			result[params[ix]] = samples[:,ix]
+			result[params[ix]] = samples[:, ix]
 
 		return result
