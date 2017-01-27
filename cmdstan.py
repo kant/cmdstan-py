@@ -56,7 +56,7 @@ class CmdStan(object):
 			data (dict)
 		'''
 		with open(filename, "w") as data_file:
-			for key,val in data.items():
+			for key, val in data.items():
 				data_file.write(key + " <- ")
 				if type(val) == np.ndarray:
 					if len(val.shape) == 1:
