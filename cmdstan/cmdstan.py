@@ -192,4 +192,5 @@ def parse_stan_out(fname):
         else:
             setattr(res, k.upper(), np.reshape(val, variables_shape[i] + [-1]))
             setattr(res, "_" + k.upper() + "mean", np.reshape(avg, variables_shape[i] + [-1]))
- 
+    
+    return res
