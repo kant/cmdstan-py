@@ -186,11 +186,14 @@ def parse_stan_out(fname):
     for i, k in enumerate(variables_names):
         val = np.array(posteriors[:,variables_start[i]:variables_stop[i]])
         avg = np.array(average[variables_start[i]:variables_stop[i]])
+        head = np.array(header[variables_start[i]:variables_stop[i]])
         if variables_shape[i] == [] or len(variables_shape[i]) == 1:
             setattr(res, k, val)
             setattr(res, k + "_mean", avg)
+            setattr(res, k + "_head", head)
         else:
             setattr(res, k.upper(), np.reshape(val, variables_shape[i] + [-1]))
             setattr(res, k.upper() + "_mean", np.reshape(avg, variables_shape[i]))
+            setattr(res, k.upper() + "_head", np.reshape(head, variables_shape[i]))
  
     return res
