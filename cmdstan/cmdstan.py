@@ -188,7 +188,7 @@ def parse_stan_out(fname):
         avg = np.array(average[variables_start[i]:variables_stop[i]])
         if variables_shape[i] == [] or len(variables_shape[i]) == 1:
             setattr(res, k, val)
-            setattr(res, k.upper() + "_mean", avg)
+            setattr(res, k + "_mean", avg)
         else:
             setattr(res, k.upper(), np.reshape(val, variables_shape[i] + [-1]))
             setattr(res, k.upper() + "_mean", np.reshape(avg, variables_shape[i]))
