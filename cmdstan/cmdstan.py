@@ -176,15 +176,15 @@ def parse_stan_out(fname):
             variables_names.append(name.split(".")[0])
             variables_start.append(i)
             variables_stop.append(i)
-            variables_shape.append([int(j) if j else 1 for j in shape_name])
+            variables_shape.append([int(j) for j in shape_name][::-1])
 
     variables_stop.append(i + 1)
     nm, rr, cc = header[i].split(".")
     shape_name = [rr, cc]
-    variables_shape.append([int(j) if j else 1 for j in shape_name])
+    variables_shape.append([int(j) for j in shape_name][::-1])
 
     for i, k in enumerate(variables_names):
-        val = np.array(posteriors[:,variables_start[i]:variables_stop[i]])
+        val = np.array(posteriors[:, variables_start[i]:variables_stop[i]])
         avg = np.array(average[variables_start[i]:variables_stop[i]])
         head = np.array(header[variables_start[i]:variables_stop[i]])
         if variables_shape[i] == [] or len(variables_shape[i]) == 1:
@@ -192,8 +192,9 @@ def parse_stan_out(fname):
             setattr(res, k + "_mean", avg)
             setattr(res, k + "_head", head)
         else:
-            setattr(res, k.upper(), np.reshape(val, variables_shape[i] + [-1]))
-            setattr(res, k.upper() + "_mean", np.reshape(avg, variables_shape[i]))
-            setattr(res, k.upper() + "_head", np.reshape(head, variables_shape[i]))
+            setattr(res, k.upper(), np.reshape(val, variables_shape[i] + [-1], order="F"))
+            setattr(res, k.upper() + "_flat", val)
+            setattr(res, k.upper() + "_mean", np.reshape(avg, variables_shape[i], order="F"))
+            setattr(res, k.upper() + "_head", np.reshape(head, variables_shape[i], order="F"))
  
     return res
