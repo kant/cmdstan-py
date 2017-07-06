@@ -176,12 +176,12 @@ def parse_stan_out(fname):
             variables_names.append(name.split(".")[0])
             variables_start.append(i)
             variables_stop.append(i)
-            variables_shape.append([int(j) for j in shape_name][::-1])
+            variables_shape.append([int(j) for j in shape_name])
 
     variables_stop.append(i + 1)
     nm, rr, cc = header[i].split(".")
     shape_name = [rr, cc]
-    variables_shape.append([int(j) for j in shape_name][::-1])
+    variables_shape.append([int(j) for j in shape_name])
 
     for i, k in enumerate(variables_names):
         val = np.array(posteriors[:, variables_start[i]:variables_stop[i]])
