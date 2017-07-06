@@ -192,7 +192,7 @@ def parse_stan_out(fname):
             setattr(res, k + "_mean", avg)
             setattr(res, k + "_head", head)
         else:
-            setattr(res, k.upper(), np.reshape(val, variables_shape[i] + [-1], order="F"))
+            setattr(res, k.upper(), np.reshape(val, [-1] + variables_shape[i], order="F"))
             setattr(res, k.upper() + "_flat", val)
             setattr(res, k.upper() + "_mean", np.reshape(avg, variables_shape[i], order="F"))
             setattr(res, k.upper() + "_head", np.reshape(head, variables_shape[i], order="F"))
