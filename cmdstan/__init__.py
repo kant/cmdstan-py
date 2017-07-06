@@ -1,1 +1,1 @@
-from .cmdstan import CmdStan
+from .cmdstan import CmdStan, parse_stan_out
