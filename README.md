@@ -1,7 +1,7 @@
 # cmdstan-py
-This repo also includes cmdstan.py, a thin wrapper around cmdstan, and BayesGLM, a commandline tool to run Bayessian Regression on an expression dataset
+This repo also includes `cmdstan.py`, a thin wrapper around cmdstan, and BayesGLM, a command-line tool to run Bayessian Regression on an expression dataset
 
-####Requires:
+#### Requires:
 ```
 numpy, pandas, Cef_tools, loompy
 ```
@@ -18,7 +18,7 @@ make build -j8
 ```
 ./BayesGLM.py -i mycef_filepath.cef -s /path/to/cmdstan-2.12.0/ -p 30
 ```
-or better, use nohup since it will run for long
+or better, use `nohup` since it will run for long
 ```
 nohup ./BayesGLM.py -i mycef_filepath.cef -s /path/to/cmdstan-2.12.0/ -p 30 &
 ```
